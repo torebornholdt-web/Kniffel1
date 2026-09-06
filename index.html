@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kniffel">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Unser Kniffelblock</title>
+<style>
+:root{
+  --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --line:#d1d5db;
+  --accent:#111827; --ok:#166534; --warn:#92400e; --locked:#e5e7eb;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:10;background:#111827;color:white;padding:12px 14px;box-shadow:0 2px 8px #0002}
+.topbar{display:flex;align-items:center;gap:10px;justify-content:space-between;max-width:1200px;margin:auto}
+h1{font-size:18px;margin:0}
+button,input{font:inherit}
+button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
+button.primary{background:white;color:#111827;font-weight:700}
+button.ghost{background:#ffffff18;color:white}
+main{max-width:1200px;margin:auto;padding:12px}
+.playerbar{display:flex;gap:8px;margin-bottom:12px}
+.playerbar button{flex:1;background:#e5e7eb;font-weight:700}
+.playerbar button.active{background:#111827;color:white}
+.info{background:white;border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 4px #0001;font-size:14px}
+.sheet-wrap{overflow:auto;background:white;border-radius:14px;box-shadow:0 1px 5px #0001}
+table{border-collapse:separate;border-spacing:0;min-width:980px;width:100%}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px;text-align:center}
+th:first-child,td:first-child{position:sticky;left:0;z-index:3;background:white;text-align:left;min-width:155px;font-weight:650}
+thead th{position:sticky;top:0;background:#f9fafb;z-index:4}
+thead th:first-child{z-index:6}
+th{font-size:13px}
+td{height:48px}
+.scorebtn{width:100%;min-width:105px;height:34px;background:#f9fafb;border:1px solid #d1d5db;border-radius:8px;font-weight:700}
+.scorebtn.open:hover{background:#eef2ff}
+.scorebtn.locked{background:var(--locked);color:#9ca3af;cursor:not-allowed}
+.scorebtn.filled{background:#ecfdf5;color:#065f46}
+.cellwrap{display:flex;gap:4px;align-items:center}
+.plus5{min-width:38px;padding:7px 5px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;font-size:12px}
+.plus5.on{background:#f59e0b;color:#111827;font-weight:800}
+.section td,.section th{background:#f3f4f6!important;font-weight:800}
+.totalrow td,.totalrow th{font-weight:800;background:#f9fafb}
+.grand td,.grand th{font-weight:900;background:#111827!important;color:white}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+dialog{border:0;border-radius:16px;padding:0;max-width:420px;width:calc(100% - 24px);box-shadow:0 16px 50px #0005}
+dialog::backdrop{background:#0007}
+.modal{padding:18px}
+.modal h2{margin:0 0 6px;font-size:20px}
+.modal p{margin:0 0 14px;color:#4b5563}
+.modal input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:20px;text-align:center}
+.modal-actions{display:flex;gap:8px;margin-top:12px}
+.modal-actions button{flex:1}
+.save{background:#111827;color:white;font-weight:800}
+.cancel{background:#e5e7eb}
+.zero{background:#fee2e2;color:#991b1b}
+.settings{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.settings button{background:#e5e7eb}
+@media(max-width:600px){
+  main{padding:8px}
+  h1{font-size:16px}
+  .info{font-size:13px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <h1>🎲 Unser Kniffelblock</h1>
+    <div>
+      <button class="ghost" id="renameBtn">Namen</button>
+      <button class="primary" id="newBtn">Neues Spiel</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="playerbar" id="playerbar"></div>
+  <div class="info" id="info"></div>
+  <div class="sheet-wrap">
+    <table id="sheet"></table>
+  </div>
+  <div class="note">
+    Reihe 3: unteren Wert als normalen Grundwert eingeben; +10 wird automatisch addiert. Kniffel in Reihe 3 = 100 Punkte.
+    Mini ist nur gültig, wenn die tatsächliche Augensumme höchstens 10 ist.
+  </div>
+</main>
+
+<dialog id="scoreDialog">
+  <div class="modal">
+    <h2 id="dlgTitle">Punkte eintragen</h2>
+    <p id="dlgHelp"></p>
+    <input id="scoreInput" type="number" inputmode="numeric" min="0" step="1" placeholder="Punkte">
+    <div class="modal-actions">
+      <button class="zero" id="zeroBtn">0 / Streichen</button>
+      <button class="cancel" id="cancelBtn">Abbrechen</button>
+      <button class="save" id="saveBtn">Eintragen</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const categories = [
+  {id:'ones', name:'Einser', upper:true},
+  {id:'twos', name:'Zweier', upper:true},
+  {id:'threes', name:'Dreier', upper:true},
+  {id:'fours', name:'Vierer', upper:true},
+  {id:'fives', name:'Fünfer', upper:true},
+  {id:'sixes', name:'Sechser', upper:true},
+  {id:'mini', name:'Mini', lower:true},
+  {id:'threeKind', name:'Dreierpasch', lower:true},
+  {id:'fourKind', name:'Viererpasch', lower:true},
+  {id:'fullHouse', name:'Full House', lower:true},
+  {id:'smallStraight', name:'Kleine Straße', lower:true},
+  {id:'largeStraight', name:'Große Straße', lower:true},
+  {id:'kniffel', name:'Kniffel', lower:true},
+  {id:'chance', name:'Chance', lower:true},
+];
+
+const rowNames = [
+  '1 ↓ oben nach unten',
+  '2 ↑ unten nach oben',
+  '3 ⚡ nur 1 Wurf',
+  '4 ④ oben nur Vierer',
+  '5 frei',
+  '6 frei'
+];
+
+let state = load() || freshState();
+let currentPlayer = 0;
+let editTarget = null;
+
+function freshState(){
+  return {
+    players:[
+      {name:'Spieler 1', rows:emptyRows()},
+      {name:'Spieler 2', rows:emptyRows()}
+    ]
+  };
+}
+function emptyRows(){
+  return Array.from({length:6},()=>Object.fromEntries(categories.map(c=>[c.id,{score:null, plus5:false}])));
+}
+function save(){ localStorage.setItem('kniffel6-v1', JSON.stringify(state)); }
+function load(){
+  try{return JSON.parse(localStorage.getItem('kniffel6-v1'))}catch(e){return null}
+}
+function cell(row, cat){ return state.players[currentPlayer].rows[row][cat.id]; }
+
+function isOpen(row, idx){
+  const cells = state.players[currentPlayer].rows[row];
+  if(cells[categories[idx].id].score !== null) return false;
+  if(row===0){
+    return categories.slice(0,idx).every(c=>cells[c.id].score !== null);
+  }
+  if(row===1){
+    return categories.slice(idx+1).every(c=>cells[c.id].score !== null);
+  }
+  return true;
+}
+
+function upperSum(row){
+  return categories.filter(c=>c.upper).reduce((s,c)=>s+(cell(row,c).score ?? 0),0);
+}
+function bonus(row){ return upperSum(row)>=63 ? 35 : 0; }
+function lowerSum(row){
+  return categories.filter(c=>c.lower).reduce((s,c)=>{
+    const x=cell(row,c);
+    return s+(x.score ?? 0)+(x.plus5?5:0);
+  },0);
+}
+function rowTotal(row){ return upperSum(row)+bonus(row)+lowerSum(row); }
+function grandTotal(){ return [0,1,2,3,4,5].reduce((s,r)=>s+rowTotal(r),0); }
+
+function render(){
+  renderPlayers();
+  document.getElementById('info').innerHTML =
+    `<b>${esc(state.players[currentPlayer].name)}</b> · Gesamt: <b>${grandTotal()} Punkte</b><br>
+     R1 strikt ↓ · R2 strikt ↑ · R3 nur erster Wurf (+10 unten) · R4 oben mindestens vier gleiche · R5/R6 frei`;
+
+  let h='<thead><tr><th>Feld</th>'+rowNames.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>';
+  categories.forEach((cat,idx)=>{
+    if(idx===6){
+      h += `<tr class="totalrow"><th>Summe oben</th>${[0,1,2,3,4,5].map(r=>`<td>${upperSum(r)}</td>`).join('')}</tr>`;
+      h += `<tr class="totalrow"><th>Bonus ab 63 = 35</th>${[0,1,2,3,4,5].map(r=>`<td>${bonus(r)}</td>`).join('')}</tr>`;
+      h += `<tr class="section"><th>Unterer Block</th>${rowNames.map(()=>'<td></td>').join('')}</tr>`;
+    }
+    h += `<tr><th>${cat.name}</th>`;
+    for(let r=0;r<6;r++){
+      const x=cell(r,cat);
+      const open=isOpen(r,idx);
+      let label=x.score===null?'–':x.score;
+      if(x.score!==null && r===2 && cat.lower && cat.id!=='kniffel') label = `${x.score} <span style="font-size:11px">(+10 inkl.)</span>`;
+      if(x.score!==null && x.plus5) label += ` <span style="font-size:11px">+5</span>`;
+      h += `<td><div class="cellwrap">
+        <button class="scorebtn ${x.score!==null?'filled':open?'open':'locked'}" ${(!open||x.score!==null)?'disabled':''}
+          onclick="openScore(${r},${idx})">${label}</button>`;
+      if(cat.lower && r!==2 && x.score!==null){
+        h += `<button class="plus5 ${x.plus5?'on':''}" onclick="toggle5(${r},${idx})">+5</button>`;
+      }
+      h += `</div></td>`;
+    }
+    h += '</tr>';
+  });
+  h += `<tr class="totalrow"><th>Summe unten</th>${[0,1,2,3,4,5].map(r=>`<td>${lowerSum(r)}</td>`).join('')}</tr>`;
+  h += `<tr class="grand"><th>GESAMT</th>${[0,1,2,3,4,5].map(r=>`<td>${rowTotal(r)}</td>`).join('')}</tr>`;
+  h += '</tbody>';
+  document.getElementById('sheet').innerHTML=h;
+  save();
+}
+
+function renderPlayers(){
+  document.getElementById('playerbar').innerHTML=state.players.map((p,i)=>
+    `<button class="${i===currentPlayer?'active':''}" onclick="switchPlayer(${i})">${esc(p.name)}</button>`).join('');
+}
+function switchPlayer(i){currentPlayer=i;render();}
+
+function openScore(row, idx){
+  const cat=categories[idx];
+  if(!isOpen(row,idx)) return;
+  editTarget={row,idx};
+  document.getElementById('dlgTitle').textContent=`${cat.name} · Reihe ${row+1}`;
+  let help='Punktwert eintragen.';
+  if(row===2 && cat.lower && cat.id!=='kniffel') help='Grundwert eintragen. Die App addiert automatisch 10 Punkte.';
+  if(row===2 && cat.id==='kniffel') help='Kniffel im ersten Wurf zählt in dieser Reihe fest 100 Punkte.';
+  if(cat.id==='mini') help += ' Mini darf nur eingetragen werden, wenn die echte Augensumme höchstens 10 beträgt.';
+  if(row===3 && cat.upper) help += ' In Reihe 4 oben nur gültig, wenn mindestens vier passende Würfel gefallen sind.';
+  document.getElementById('dlgHelp').textContent=help;
+  const inp=document.getElementById('scoreInput');
+  inp.value='';
+  inp.disabled = (row===2 && cat.id==='kniffel');
+  if(inp.disabled) inp.value=100;
+  document.getElementById('scoreDialog').showModal();
+  setTimeout(()=>inp.focus(),50);
+}
+
+function commitScore(forceZero=false){
+  const {row,idx}=editTarget;
+  const cat=categories[idx];
+  let val=forceZero ? 0 : Number(document.getElementById('scoreInput').value);
+  if(!Number.isFinite(val) || val<0){alert('Bitte einen gültigen Punktwert eingeben.');return;}
+  val=Math.floor(val);
+
+  if(cat.id==='mini' && val>10){
+    alert('Mini darf nur bei einer tatsächlichen Augensumme von höchstens 10 eingetragen werden.');
+    return;
+  }
+  if(row===2 && cat.id==='kniffel'){
+    val = forceZero ? 0 : 100;
+  } else if(row===2 && cat.lower && !forceZero){
+    val += 10;
+  }
+  state.players[currentPlayer].rows[row][cat.id].score=val;
+  document.getElementById('scoreDialog').close();
+  render();
+}
+function toggle5(row,idx){
+  const cat=categories[idx], x=cell(row,cat);
+  if(x.score===null || !cat.lower || row===2) return;
+  x.plus5=!x.plus5;
+  render();
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+
+document.getElementById('saveBtn').onclick=()=>commitScore(false);
+document.getElementById('zeroBtn').onclick=()=>commitScore(true);
+document.getElementById('cancelBtn').onclick=()=>document.getElementById('scoreDialog').close();
+document.getElementById('scoreInput').addEventListener('keydown',e=>{if(e.key==='Enter')commitScore(false)});
+
+document.getElementById('newBtn').onclick=()=>{
+  if(confirm('Wirklich ein neues Spiel starten? Der aktuelle Spielstand wird gelöscht.')){
+    const names=state.players.map(p=>p.name);
+    state=freshState();
+    state.players.forEach((p,i)=>p.name=names[i]);
+    currentPlayer=0; save(); render();
+  }
+};
+document.getElementById('renameBtn').onclick=()=>{
+  const a=prompt('Name Spieler 1:',state.players[0].name);
+  if(a!==null && a.trim()) state.players[0].name=a.trim();
+  const b=prompt('Name Spieler 2:',state.players[1].name);
+  if(b!==null && b.trim()) state.players[1].name=b.trim();
+  render();
+};
+render();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+  });
+}
+</script>
+
+</body>
+</html>
