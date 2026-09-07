@@ -88,7 +88,7 @@ dialog::backdrop{background:#0007}
   </div>
   <div class="note">
     Reihe 3: unteren Wert als normalen Grundwert eingeben; +10 wird automatisch addiert. Kniffel in Reihe 3 = 100 Punkte.
-    Mini ist nur gültig, wenn die tatsächliche Augensumme höchstens 10 ist.
+    Mini: bei höchstens 10 gewürfelten Augen immer 20 Punkte; in Reihe 3 = 30 Punkte.
   </div>
 </main>
 
@@ -229,13 +229,14 @@ function openScore(row, idx){
   let help='Punktwert eintragen.';
   if(row===2 && cat.lower && cat.id!=='kniffel') help='Grundwert eintragen. Die App addiert automatisch 10 Punkte.';
   if(row===2 && cat.id==='kniffel') help='Kniffel im ersten Wurf zählt in dieser Reihe fest 100 Punkte.';
-  if(cat.id==='mini') help += ' Mini darf nur eingetragen werden, wenn die echte Augensumme höchstens 10 beträgt.';
+  if(cat.id==='mini') help = row===2 ? 'Mini zählt in der 1.-Wurf-Reihe fest 30 Punkte (20 + 10).' : 'Mini zählt fest 20 Punkte. Voraussetzung: tatsächliche Augensumme höchstens 10.';
   if(row===3 && cat.upper) help += ' In Reihe 4 oben nur gültig, wenn mindestens vier passende Würfel gefallen sind.';
   document.getElementById('dlgHelp').textContent=help;
   const inp=document.getElementById('scoreInput');
   inp.value='';
-  inp.disabled = (row===2 && cat.id==='kniffel');
-  if(inp.disabled) inp.value=100;
+  inp.disabled = (cat.id==='mini') || (row===2 && cat.id==='kniffel');
+  if(cat.id==='mini') inp.value = (row===2 ? 30 : 20);
+  else if(row===2 && cat.id==='kniffel') inp.value=100;
   document.getElementById('scoreDialog').showModal();
   setTimeout(()=>inp.focus(),50);
 }
@@ -247,11 +248,9 @@ function commitScore(forceZero=false){
   if(!Number.isFinite(val) || val<0){alert('Bitte einen gültigen Punktwert eingeben.');return;}
   val=Math.floor(val);
 
-  if(cat.id==='mini' && val>10){
-    alert('Mini darf nur bei einer tatsächlichen Augensumme von höchstens 10 eingetragen werden.');
-    return;
-  }
-  if(row===2 && cat.id==='kniffel'){
+  if(cat.id==='mini'){
+    val = forceZero ? 0 : (row===2 ? 30 : 20);
+  } else if(row===2 && cat.id==='kniffel'){
     val = forceZero ? 0 : 100;
   } else if(row===2 && cat.lower && !forceZero){
     val += 10;

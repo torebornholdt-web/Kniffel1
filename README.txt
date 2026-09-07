@@ -1,19 +1,9 @@
-Unser Kniffelblock – PWA-Version
+Kniffel-App v4
+Mini-Regel:
+- Mini ist gültig bei einer tatsächlichen Augensumme bis einschließlich 10.
+- Gültiger Mini zählt immer 20 Punkte.
+- In Reihe 3 (1. Wurf) zählt Mini 30 Punkte.
+- In den anderen Reihen ist beim Mini zusätzlich der +5-Erstwurfbonus möglich.
+- Streichen mit 0 bleibt möglich.
 
-Enthalten:
-- index.html
-- manifest.webmanifest
-- service-worker.js
-- App-Icons
-- Offline-Unterstützung
-- Vollbild-/Standalone-Modus auf dem Handy
-
-Wichtig:
-Damit 'Zum Home-Bildschirm' dauerhaft funktioniert, muss der komplette Ordner über HTTPS veröffentlicht werden.
-GitHub Pages ist dafür kostenlos geeignet.
-
-Nach dem Hochladen:
-iPhone: Safari > Teilen > Zum Home-Bildschirm
-Android: Chrome > Menü > App installieren / Zum Startbildschirm hinzufügen
-
-Der Spielstand wird lokal auf dem jeweiligen Gerät gespeichert.
+Für GitHub Pages alle Dateien dieses Pakets in das bestehende Repository hochladen und die vorhandenen Dateien ersetzen.
