@@ -98,9 +98,10 @@ dialog::backdrop{background:#0007}
     <p id="dlgHelp"></p>
     <input id="scoreInput" type="number" inputmode="numeric" min="0" step="1" placeholder="Punkte">
     <div class="modal-actions">
+      <button class="zero" id="deleteBtn">Feld löschen</button>
       <button class="zero" id="zeroBtn">0 / Streichen</button>
       <button class="cancel" id="cancelBtn">Abbrechen</button>
-      <button class="save" id="saveBtn">Eintragen</button>
+      <button class="save" id="saveBtn">Speichern</button>
     </div>
   </div>
 </dialog>
@@ -199,7 +200,7 @@ function render(){
       if(x.score!==null && r===2 && cat.lower && cat.id!=='kniffel') label = `${x.score} <span style="font-size:11px">(+10 inkl.)</span>`;
       if(x.score!==null && x.plus5) label += ` <span style="font-size:11px">+5</span>`;
       h += `<td><div class="cellwrap">
-        <button class="scorebtn ${x.score!==null?'filled':open?'open':'locked'}" ${(!open||x.score!==null)?'disabled':''}
+        <button class="scorebtn ${x.score!==null?'filled':open?'open':'locked'}" ${(!open&&x.score===null)?'disabled':''}
           onclick="openScore(${r},${idx})">${label}</button>`;
       if(cat.lower && r!==2 && x.score!==null){
         h += `<button class="plus5 ${x.plus5?'on':''}" onclick="toggle5(${r},${idx})">+5</button>`;
@@ -223,22 +224,57 @@ function switchPlayer(i){currentPlayer=i;render();}
 
 function openScore(row, idx){
   const cat=categories[idx];
-  if(!isOpen(row,idx)) return;
+  const x=cell(row,cat);
+  const editing = x.score !== null;
+  if(!editing && !isOpen(row,idx)) return;
+
   editTarget={row,idx};
-  document.getElementById('dlgTitle').textContent=`${cat.name} · Reihe ${row+1}`;
-  let help='Punktwert eintragen.';
-  if(row===2 && cat.lower && cat.id!=='kniffel') help='Grundwert eintragen. Die App addiert automatisch 10 Punkte.';
-  if(row===2 && cat.id==='kniffel') help='Kniffel im ersten Wurf zählt in dieser Reihe fest 100 Punkte.';
-  if(cat.id==='mini') help = row===2 ? 'Mini zählt in der 1.-Wurf-Reihe fest 30 Punkte (20 + 10).' : 'Mini zählt fest 20 Punkte. Voraussetzung: tatsächliche Augensumme höchstens 10.';
-  if(row===3 && cat.upper) help += ' In Reihe 4 oben nur gültig, wenn mindestens vier passende Würfel gefallen sind.';
+  document.getElementById('dlgTitle').textContent =
+    `${cat.name} · Reihe ${row+1}${editing?' · Korrektur':''}`;
+
+  let help = editing
+    ? 'Vorhandenen Eintrag korrigieren. Mit „Feld löschen“ wird das Feld wieder frei.'
+    : 'Punktwert eintragen.';
+
+  if(row===2 && cat.lower && cat.id!=='kniffel' && cat.id!=='mini'){
+    help = editing
+      ? 'Gespeicherter Wert enthält bereits den +10-Bonus der 1.-Wurf-Reihe.'
+      : 'Grundwert eintragen. Die App addiert automatisch 10 Punkte.';
+  }
+
+  if(row===2 && cat.id==='kniffel')
+    help = 'Kniffel im ersten Wurf zählt in dieser Reihe fest 100 Punkte.';
+
+  if(cat.id==='mini')
+    help = row===2
+      ? 'Mini zählt in der 1.-Wurf-Reihe fest 30 Punkte (20 + 10).'
+      : 'Mini zählt fest 20 Punkte. Voraussetzung: tatsächliche Augensumme höchstens 10.';
+
+  if(row===3 && cat.upper)
+    help += ' In Reihe 4 oben nur gültig, wenn mindestens vier passende Würfel gefallen sind.';
+
   document.getElementById('dlgHelp').textContent=help;
+
   const inp=document.getElementById('scoreInput');
-  inp.value='';
   inp.disabled = (cat.id==='mini') || (row===2 && cat.id==='kniffel');
-  if(cat.id==='mini') inp.value = (row===2 ? 30 : 20);
-  else if(row===2 && cat.id==='kniffel') inp.value=100;
+
+  if(editing){
+    if(cat.id==='mini' || (row===2 && cat.id==='kniffel')){
+      inp.value = x.score;
+    } else if(row===2 && cat.lower && x.score!==0){
+      inp.value = Math.max(0, x.score-10);
+    } else {
+      inp.value = x.score;
+    }
+  } else {
+    inp.value='';
+    if(cat.id==='mini') inp.value=(row===2 ? 30 : 20);
+    else if(row===2 && cat.id==='kniffel') inp.value=100;
+  }
+
+  document.getElementById('deleteBtn').style.display = editing ? 'block' : 'none';
   document.getElementById('scoreDialog').showModal();
-  setTimeout(()=>inp.focus(),50);
+  if(!inp.disabled) setTimeout(()=>inp.focus(),50);
 }
 
 function commitScore(forceZero=false){
@@ -265,10 +301,26 @@ function toggle5(row,idx){
   x.plus5=!x.plus5;
   render();
 }
+
+function deleteScore(){
+  if(!editTarget) return;
+  const {row,idx}=editTarget;
+  const cat=categories[idx];
+  const x=cell(row,cat);
+  if(x.score===null) return;
+
+  if(confirm(`${cat.name} in Reihe ${row+1} wirklich löschen?`)){
+    x.score=null;
+    x.plus5=false;
+    document.getElementById('scoreDialog').close();
+    render();
+  }
+}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 
 document.getElementById('saveBtn').onclick=()=>commitScore(false);
 document.getElementById('zeroBtn').onclick=()=>commitScore(true);
+document.getElementById('deleteBtn').onclick=deleteScore;
 document.getElementById('cancelBtn').onclick=()=>document.getElementById('scoreDialog').close();
 document.getElementById('scoreInput').addEventListener('keydown',e=>{if(e.key==='Enter')commitScore(false)});
 
