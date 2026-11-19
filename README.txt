@@ -1,16 +1,11 @@
-Kniffel-App v4
-Mini-Regel:
-- Mini ist gültig bei einer tatsächlichen Augensumme bis einschließlich 10.
-- Gültiger Mini zählt immer 20 Punkte.
-- In Reihe 3 (1. Wurf) zählt Mini 30 Punkte.
-- In den anderen Reihen ist beim Mini zusätzlich der +5-Erstwurfbonus möglich.
-- Streichen mit 0 bleibt möglich.
+Unser Kniffelblock – Version 7
 
-Für GitHub Pages alle Dateien dieses Pakets in das bestehende Repository hochladen und die vorhandenen Dateien ersetzen.
-
-Änderung v5:
-- Bereits belegte Felder können erneut angetippt und korrigiert werden.
-- Bestehende Werte lassen sich ändern.
-- 0 / Streichen bleibt möglich.
-- "Feld löschen" macht einen versehentlich belegten Eintrag wieder frei.
-- +5 kann weiterhin separat ein- und ausgeschaltet werden.
+Änderungen:
+- Gestrichene Felder (0) werden rot dargestellt.
+- Spielschulden-Rechner entfernt.
+- Bonuszeile zeigt ab 63 direkt Summe oben + 35.
+- Full House fest 25, Kleine Straße 30, Große Straße 40, Kniffel 50.
+- Blitz: im unteren Block automatisch +10, auch bei Dreier- und Viererpasch.
+- Optional +5 außerhalb Blitz nur bei Mini, Full House, Kleiner/Großer Straße und Kniffel.
+- Dreier- und Viererpasch haben keinen +5-Schalter mehr.
+- Korrekturfunktion bleibt erhalten.

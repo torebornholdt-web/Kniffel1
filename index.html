@@ -42,6 +42,7 @@ td{height:48px}
 .scorebtn.open:hover{background:#eef2ff}
 .scorebtn.locked{background:var(--locked);color:#9ca3af;cursor:not-allowed}
 .scorebtn.filled{background:#ecfdf5;color:#065f46}
+.scorebtn.struck{background:#fecaca;border-color:#dc2626;color:#991b1b;font-weight:900}
 .cellwrap{display:flex;gap:4px;align-items:center}
 .plus5{min-width:38px;padding:7px 5px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;font-size:12px}
 .plus5.on{background:#f59e0b;color:#111827;font-weight:800}
@@ -86,9 +87,9 @@ dialog::backdrop{background:#0007}
   <div class="sheet-wrap">
     <table id="sheet"></table>
   </div>
-  <div class="note">
-    Reihe 3: unteren Wert als normalen Grundwert eingeben; +10 wird automatisch addiert. Kniffel in Reihe 3 = 100 Punkte.
-    Mini: bei höchstens 10 gewürfelten Augen immer 20 Punkte; in Reihe 3 = 30 Punkte.
+<div class="note">
+    Blitz (Reihe 3): im unteren Block werden automatisch +10 Punkte addiert.
+    Feste Werte: Mini 20, Full House 25, Kleine Straße 30, Große Straße 40, Kniffel 50. In Blitz jeweils +10.
   </div>
 </main>
 
@@ -123,6 +124,8 @@ const categories = [
   {id:'kniffel', name:'Kniffel', lower:true},
   {id:'chance', name:'Chance', lower:true},
 ];
+
+const plus5Eligible = new Set(['mini','fullHouse','smallStraight','largeStraight','kniffel']);
 
 const rowNames = [
   '1 ↓ oben nach unten',
@@ -170,13 +173,14 @@ function upperSum(row){
   return categories.filter(c=>c.upper).reduce((s,c)=>s+(cell(row,c).score ?? 0),0);
 }
 function bonus(row){ return upperSum(row)>=63 ? 35 : 0; }
+function upperWithBonus(row){ const u=upperSum(row); return u>=63 ? u+35 : u; }
 function lowerSum(row){
   return categories.filter(c=>c.lower).reduce((s,c)=>{
     const x=cell(row,c);
     return s+(x.score ?? 0)+(x.plus5?5:0);
   },0);
 }
-function rowTotal(row){ return upperSum(row)+bonus(row)+lowerSum(row); }
+function rowTotal(row){ return upperWithBonus(row)+lowerSum(row); }
 function grandTotal(){ return [0,1,2,3,4,5].reduce((s,r)=>s+rowTotal(r),0); }
 
 function render(){
@@ -189,7 +193,7 @@ function render(){
   categories.forEach((cat,idx)=>{
     if(idx===6){
       h += `<tr class="totalrow"><th>Summe oben</th>${[0,1,2,3,4,5].map(r=>`<td>${upperSum(r)}</td>`).join('')}</tr>`;
-      h += `<tr class="totalrow"><th>Bonus ab 63 = 35</th>${[0,1,2,3,4,5].map(r=>`<td>${bonus(r)}</td>`).join('')}</tr>`;
+      h += `<tr class="totalrow"><th>Gesamt oben / Bonus ab 63</th>${[0,1,2,3,4,5].map(r=>`<td>${upperWithBonus(r)}</td>`).join('')}</tr>`;
       h += `<tr class="section"><th>Unterer Block</th>${rowNames.map(()=>'<td></td>').join('')}</tr>`;
     }
     h += `<tr><th>${cat.name}</th>`;
@@ -200,9 +204,9 @@ function render(){
       if(x.score!==null && r===2 && cat.lower && cat.id!=='kniffel') label = `${x.score} <span style="font-size:11px">(+10 inkl.)</span>`;
       if(x.score!==null && x.plus5) label += ` <span style="font-size:11px">+5</span>`;
       h += `<td><div class="cellwrap">
-        <button class="scorebtn ${x.score!==null?'filled':open?'open':'locked'}" ${(!open&&x.score===null)?'disabled':''}
+        <button class="scorebtn ${x.score===0?'struck':x.score!==null?'filled':open?'open':'locked'}" ${(!open&&x.score===null)?'disabled':''}
           onclick="openScore(${r},${idx})">${label}</button>`;
-      if(cat.lower && r!==2 && x.score!==null){
+      if(cat.lower && plus5Eligible.has(cat.id) && r!==2 && x.score!==null && x.score!==0){
         h += `<button class="plus5 ${x.plus5?'on':''}" onclick="toggle5(${r},${idx})">+5</button>`;
       }
       h += `</div></td>`;
@@ -242,13 +246,13 @@ function openScore(row, idx){
       : 'Grundwert eintragen. Die App addiert automatisch 10 Punkte.';
   }
 
-  if(row===2 && cat.id==='kniffel')
-    help = 'Kniffel im ersten Wurf zählt in dieser Reihe fest 100 Punkte.';
-
-  if(cat.id==='mini')
-    help = row===2
-      ? 'Mini zählt in der 1.-Wurf-Reihe fest 30 Punkte (20 + 10).'
-      : 'Mini zählt fest 20 Punkte. Voraussetzung: tatsächliche Augensumme höchstens 10.';
+  const fixedBase = {mini:20, fullHouse:25, smallStraight:30, largeStraight:40, kniffel:50};
+  if(Object.prototype.hasOwnProperty.call(fixedBase,cat.id)){
+    const base=fixedBase[cat.id], total=base+(row===2?10:0);
+    help = cat.id==='mini'
+      ? `Mini zählt fest ${total} Punkte${row===2?' (20 + 10 Blitz)':''}. Voraussetzung: tatsächliche Augensumme höchstens 10.`
+      : `${cat.name} zählt fest ${total} Punkte${row===2?` (${base} + 10 Blitz)`:''}.`;
+  }
 
   if(row===3 && cat.upper)
     help += ' In Reihe 4 oben nur gültig, wenn mindestens vier passende Würfel gefallen sind.';
@@ -256,10 +260,11 @@ function openScore(row, idx){
   document.getElementById('dlgHelp').textContent=help;
 
   const inp=document.getElementById('scoreInput');
-  inp.disabled = (cat.id==='mini') || (row===2 && cat.id==='kniffel');
+  const fixedLower = ['mini','fullHouse','smallStraight','largeStraight','kniffel'].includes(cat.id);
+  inp.disabled = fixedLower;
 
   if(editing){
-    if(cat.id==='mini' || (row===2 && cat.id==='kniffel')){
+    if(fixedLower){
       inp.value = x.score;
     } else if(row===2 && cat.lower && x.score!==0){
       inp.value = Math.max(0, x.score-10);
@@ -268,8 +273,10 @@ function openScore(row, idx){
     }
   } else {
     inp.value='';
-    if(cat.id==='mini') inp.value=(row===2 ? 30 : 20);
-    else if(row===2 && cat.id==='kniffel') inp.value=100;
+    if(fixedLower){
+      const fixedBase={mini:20,fullHouse:25,smallStraight:30,largeStraight:40,kniffel:50};
+      inp.value=fixedBase[cat.id]+(row===2?10:0);
+    }
   }
 
   document.getElementById('deleteBtn').style.display = editing ? 'block' : 'none';
@@ -284,20 +291,20 @@ function commitScore(forceZero=false){
   if(!Number.isFinite(val) || val<0){alert('Bitte einen gültigen Punktwert eingeben.');return;}
   val=Math.floor(val);
 
-  if(cat.id==='mini'){
-    val = forceZero ? 0 : (row===2 ? 30 : 20);
-  } else if(row===2 && cat.id==='kniffel'){
-    val = forceZero ? 0 : 100;
+  const fixedBase={mini:20,fullHouse:25,smallStraight:30,largeStraight:40,kniffel:50};
+  if(Object.prototype.hasOwnProperty.call(fixedBase,cat.id)){
+    val = forceZero ? 0 : fixedBase[cat.id] + (row===2 ? 10 : 0);
   } else if(row===2 && cat.lower && !forceZero){
     val += 10;
   }
   state.players[currentPlayer].rows[row][cat.id].score=val;
+  if(val===0) state.players[currentPlayer].rows[row][cat.id].plus5=false;
   document.getElementById('scoreDialog').close();
   render();
 }
 function toggle5(row,idx){
   const cat=categories[idx], x=cell(row,cat);
-  if(x.score===null || !cat.lower || row===2) return;
+  if(x.score===null || !cat.lower || !plus5Eligible.has(cat.id) || row===2 || x.score===0) return;
   x.plus5=!x.plus5;
   render();
 }
@@ -340,6 +347,7 @@ document.getElementById('renameBtn').onclick=()=>{
   render();
 };
 render();
+
 </script>
 
 <script>
@@ -348,6 +356,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js').catch(console.error);
   });
 }
+
 </script>
 
 </body>
