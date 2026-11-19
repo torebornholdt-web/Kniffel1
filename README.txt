@@ -1,4 +1,4 @@
-Unser Kniffelblock – Version 7
+Unser Kniffelblock – Version 7.1
 
 Änderungen:
 - Gestrichene Felder (0) werden rot dargestellt.
@@ -9,3 +9,5 @@ Unser Kniffelblock – Version 7
 - Optional +5 außerhalb Blitz nur bei Mini, Full House, Kleiner/Großer Straße und Kniffel.
 - Dreier- und Viererpasch haben keinen +5-Schalter mehr.
 - Korrekturfunktion bleibt erhalten.
+
+- Korrektur: Kniffel in Blitz = 100 Punkte (50 Grundwert + 50 Blitzbonus).
